@@ -105,17 +105,34 @@ class RAGService:
             "You are a production-grade Enterprise RAG Knowledge Assistant.\n"
             "Analyze and answer the user's question using ONLY the provided contexts below.\n"
             "If the provided contexts do not contain enough information to answer the question, "
-            "reply exactly with: 'I cannot answer this question based on the provided enterprise knowledge base.'\n"
-            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts.\n"
+            "reply exactly with: 'No matches found after checking all records.'\n"
+            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts.\n\n"
+            "You MUST follow these strict guidelines:\n"
+            "## CORE SEARCH RULES\n"
+            "1. EXHAUSTIVE SCAN — Always go through EVERY record, document, or entry before forming your answer. Never stop early after finding the first few matches.\n"
+            "2. SEARCH EVERYWHERE — Look in ALL fields, sections, sub-sections, categories, bullet points, and descriptions. A match anywhere counts as a valid match.\n"
+            "3. NO ASSUMPTIONS — Never assume a record does not contain something without explicitly checking it first.\n"
+            "4. COMPLETE LIST — When asked to \"list all\", your response must include every match found. Never return a partial list.\n"
+            "5. SELF-VERIFY — Before responding, internally ask yourself:\n"
+            "   \"Have I checked every single record?\" and \"Did I search all fields, not just the main/obvious ones?\"\n"
+            "   Only respond after both answers are YES.\n\n"
+            "## ACCURACY RULES\n"
+            "6. If you find a match, include it — regardless of which section or field it appears in.\n"
+            "7. If you miss something and the user corrects you, acknowledge the error, re-scan fully, and provide the corrected complete answer.\n"
+            "8. Never fabricate or assume data. Only report what is explicitly present in the provided information.\n\n"
+            "## RESPONSE FORMAT\n"
+            "- Clearly list all matches with the relevant detail (e.g., which section/source document the match was found in).\n"
+            "- State the total count at the end: \"Total found: X\"\n"
+            "- If no matches found, explicitly say: \"No matches found after checking all records.\"\n"
         )
         if detail_level == "descriptive":
             system_instruction += (
-                "Provide a highly detailed, exhaustive, and in-depth descriptive answer. "
+                "\nProvide a highly detailed, exhaustive, and in-depth descriptive answer. "
                 "Explain the concepts thoroughly, list all relevant details, and provide complete explanations based on the context."
             )
         else:
             system_instruction += (
-                "Provide a clear, medium-length response that summarizes the main points concisely "
+                "\nProvide a clear, medium-length response that summarizes the main points concisely "
                 "without leaving out key facts, but avoiding unnecessary verbosity."
             )
 
@@ -123,7 +140,7 @@ class RAGService:
 
         # 6. Execute LLM call or fallback if no document chunks were retrieved
         if not hits:
-            answer = "I cannot answer this question based on the provided enterprise knowledge base."
+            answer = "No matches found after checking all records."
         else:
             try:
                 answer = await gemini_service.generate_response(prompt, system_instruction=system_instruction)
@@ -138,7 +155,7 @@ class RAGService:
 
         # 8. Write response payload to Redis cache (1 hour TTL)
         # Prevent caching fallback/error answers to minimize cache staleness for unanswered questions
-        if hits and not answer.startswith("I cannot answer"):
+        if hits and not answer.startswith("No matches found"):
             try:
                 response_data = {
                     "answer": answer,
@@ -254,17 +271,34 @@ class RAGService:
             "You are a production-grade Enterprise RAG Knowledge Assistant.\n"
             "Analyze and answer the user's question using ONLY the provided contexts below.\n"
             "If the provided contexts do not contain enough information to answer the question, "
-            "reply exactly with: 'I cannot answer this question based on the provided enterprise knowledge base.'\n"
-            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts.\n"
+            "reply exactly with: 'No matches found after checking all records.'\n"
+            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts.\n\n"
+            "You MUST follow these strict guidelines:\n"
+            "## CORE SEARCH RULES\n"
+            "1. EXHAUSTIVE SCAN — Always go through EVERY record, document, or entry before forming your answer. Never stop early after finding the first few matches.\n"
+            "2. SEARCH EVERYWHERE — Look in ALL fields, sections, sub-sections, categories, bullet points, and descriptions. A match anywhere counts as a valid match.\n"
+            "3. NO ASSUMPTIONS — Never assume a record does not contain something without explicitly checking it first.\n"
+            "4. COMPLETE LIST — When asked to \"list all\", your response must include every match found. Never return a partial list.\n"
+            "5. SELF-VERIFY — Before responding, internally ask yourself:\n"
+            "   \"Have I checked every single record?\" and \"Did I search all fields, not just the main/obvious ones?\"\n"
+            "   Only respond after both answers are YES.\n\n"
+            "## ACCURACY RULES\n"
+            "6. If you find a match, include it — regardless of which section or field it appears in.\n"
+            "7. If you miss something and the user corrects you, acknowledge the error, re-scan fully, and provide the corrected complete answer.\n"
+            "8. Never fabricate or assume data. Only report what is explicitly present in the provided information.\n\n"
+            "## RESPONSE FORMAT\n"
+            "- Clearly list all matches with the relevant detail (e.g., which section/source document the match was found in).\n"
+            "- State the total count at the end: \"Total found: X\"\n"
+            "- If no matches found, explicitly say: \"No matches found after checking all records.\"\n"
         )
         if detail_level == "descriptive":
             system_instruction += (
-                "Provide a highly detailed, exhaustive, and in-depth descriptive answer. "
+                "\nProvide a highly detailed, exhaustive, and in-depth descriptive answer. "
                 "Explain the concepts thoroughly, list all relevant details, and provide complete explanations based on the context."
             )
         else:
             system_instruction += (
-                "Provide a clear, medium-length response that summarizes the main points concisely "
+                "\nProvide a clear, medium-length response that summarizes the main points concisely "
                 "without leaving out key facts, but avoiding unnecessary verbosity."
             )
 
@@ -272,7 +306,7 @@ class RAGService:
 
         # 6. Execute LLM call or fallback
         if not hits:
-            answer = "I cannot answer this question based on the provided enterprise knowledge base."
+            answer = "No matches found after checking all records."
             yield f"data: {json.dumps({'type': 'token', 'content': answer})}\n\n"
         else:
             answer = ""
@@ -305,7 +339,7 @@ class RAGService:
 
         # 8. Write response payload to Redis cache (1 hour TTL)
         # Prevent caching fallback/error answers to minimize cache staleness for unanswered questions
-        if hits and not answer.startswith("I cannot answer"):
+        if hits and not answer.startswith("No matches found"):
             try:
                 response_data = {
                     "answer": answer,
