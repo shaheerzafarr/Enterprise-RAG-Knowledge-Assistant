@@ -24,6 +24,7 @@ export default function ChatSessionPage() {
   const [loading, setLoading] = useState(true);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailLevel, setDetailLevel] = useState<'normal' | 'descriptive'>('normal');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollBottomButton, setShowScrollBottomButton] = useState(false);
@@ -123,7 +124,7 @@ export default function ChatSessionPage() {
 
     try {
       // Initiate Server-Sent Events stream from backend
-      const response = await apiService.chat.sendStreamMessage(sessionId, queryText);
+      const response = await apiService.chat.sendStreamMessage(sessionId, queryText, 5, detailLevel);
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('Response stream body reader is unavailable.');
@@ -272,6 +273,37 @@ export default function ChatSessionPage() {
 
       {/* Chat Input Dock */}
       <div className="p-6 border-t border-slate-900/60 bg-slate-950/80 backdrop-blur-md shrink-0 z-10">
+        <div className="max-w-3xl mx-auto mb-3 flex items-center justify-between text-xs">
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+            Response Detail Level
+          </span>
+          <div className="flex bg-slate-900/80 border border-slate-800/85 p-0.5 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setDetailLevel('normal')}
+              disabled={loading || streaming}
+              className={`px-3 py-1 rounded-md font-semibold text-xs tracking-wide transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                detailLevel === 'normal'
+                  ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold shadow-sm'
+                  : 'border border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Normal
+            </button>
+            <button
+              type="button"
+              onClick={() => setDetailLevel('descriptive')}
+              disabled={loading || streaming}
+              className={`px-3 py-1 rounded-md font-semibold text-xs tracking-wide transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                detailLevel === 'descriptive'
+                  ? 'bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold shadow-sm'
+                  : 'border border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Descriptive
+            </button>
+          </div>
+        </div>
         <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex items-center gap-3">
           <input
             type="text"

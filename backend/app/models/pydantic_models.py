@@ -60,6 +60,7 @@ class ChatMessageResponse(BaseModel):
 class RAGQueryRequest(BaseModel):
     query: str = Field(..., description="The query question to answer using RAG knowledge database")
     limit: int = Field(default=5, ge=1, le=20, description="The maximum number of contexts to retrieve")
+    detail_level: str = Field(default="normal", description="Detail level of answer: normal, descriptive")
 
 class RAGSourceItem(BaseModel):
     filename: str

@@ -94,7 +94,8 @@ async def send_message_to_session(
             db=db,
             session_id=session_id,
             query=payload.query,
-            limit=payload.limit
+            limit=payload.limit,
+            detail_level=payload.detail_level
         )
         return response
     except HTTPException:
@@ -176,7 +177,8 @@ async def send_message_stream(
             db=db,
             session_id=session_id,
             query=payload.query,
-            limit=payload.limit
+            limit=payload.limit,
+            detail_level=payload.detail_level
         )
         return StreamingResponse(generator, media_type="text/event-stream")
     except HTTPException:

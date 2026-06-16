@@ -122,7 +122,8 @@ export const apiService = {
     sendStreamMessage: async (
       sessionId: string,
       query: string,
-      limit: number = 5
+      limit: number = 5,
+      detailLevel: 'normal' | 'descriptive' = 'normal'
     ): Promise<Response> => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       const headers: Record<string, string> = {
@@ -135,7 +136,7 @@ export const apiService = {
       const response = await fetch(`${API_BASE_URL}/chat/session/${sessionId}/stream`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ query, limit }),
+        body: JSON.stringify({ query, limit, detail_level: detailLevel }),
       });
 
       if (!response.ok) {

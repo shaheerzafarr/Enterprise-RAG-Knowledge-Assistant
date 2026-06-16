@@ -19,7 +19,8 @@ class RAGService:
         db: AsyncSession,
         session_id: uuid.UUID,
         query: str,
-        limit: int = 5
+        limit: int = 5,
+        detail_level: str = "normal"
     ) -> dict:
         """
         Retrieves matching contexts from Qdrant, builds a grounded prompt, 
@@ -42,7 +43,7 @@ class RAGService:
 
         # 3. Check Redis cache first (exact query match cache)
         normalized_query = query.strip().lower()
-        cache_key = f"rag_cache:{normalized_query}"
+        cache_key = f"rag_cache:{detail_level}:{normalized_query}"
         
         try:
             cached_data = await redis_service.get(cache_key)
@@ -105,8 +106,18 @@ class RAGService:
             "Analyze and answer the user's question using ONLY the provided contexts below.\n"
             "If the provided contexts do not contain enough information to answer the question, "
             "reply exactly with: 'I cannot answer this question based on the provided enterprise knowledge base.'\n"
-            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts."
+            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts.\n"
         )
+        if detail_level == "descriptive":
+            system_instruction += (
+                "Provide a highly detailed, exhaustive, and in-depth descriptive answer. "
+                "Explain the concepts thoroughly, list all relevant details, and provide complete explanations based on the context."
+            )
+        else:
+            system_instruction += (
+                "Provide a clear, medium-length response that summarizes the main points concisely "
+                "without leaving out key facts, but avoiding unnecessary verbosity."
+            )
 
         prompt = f"Retrieved Contexts:\n{context_str}\n\nUser Question: {query}"
 
@@ -146,7 +157,8 @@ class RAGService:
         db: AsyncSession,
         session_id: uuid.UUID,
         query: str,
-        limit: int = 5
+        limit: int = 5,
+        detail_level: str = "normal"
     ):
         """
         Retrieves matching contexts from Qdrant, builds a grounded prompt,
@@ -167,7 +179,7 @@ class RAGService:
 
         # 3. Check Redis cache first (exact query match cache)
         normalized_query = query.strip().lower()
-        cache_key = f"rag_cache:{normalized_query}"
+        cache_key = f"rag_cache:{detail_level}:{normalized_query}"
         
         try:
             cached_data = await redis_service.get(cache_key)
@@ -241,8 +253,18 @@ class RAGService:
             "Analyze and answer the user's question using ONLY the provided contexts below.\n"
             "If the provided contexts do not contain enough information to answer the question, "
             "reply exactly with: 'I cannot answer this question based on the provided enterprise knowledge base.'\n"
-            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts."
+            "Do not make up facts, extrapolate, or hallucinate beyond what is explicitly written in the contexts.\n"
         )
+        if detail_level == "descriptive":
+            system_instruction += (
+                "Provide a highly detailed, exhaustive, and in-depth descriptive answer. "
+                "Explain the concepts thoroughly, list all relevant details, and provide complete explanations based on the context."
+            )
+        else:
+            system_instruction += (
+                "Provide a clear, medium-length response that summarizes the main points concisely "
+                "without leaving out key facts, but avoiding unnecessary verbosity."
+            )
 
         prompt = f"Retrieved Contexts:\n{context_str}\n\nUser Question: {query}"
 
