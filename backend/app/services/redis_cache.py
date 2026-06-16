@@ -59,6 +59,19 @@ class RedisService:
             logger.error("Redis operation failed: delete", key=key, error=str(e))
             return False
 
+    async def clear_cache_pattern(self, pattern: str) -> None:
+        if not self.client:
+            raise RuntimeError("Redis client is not initialized. Call connect() first.")
+        try:
+            keys = []
+            async for key in self.client.scan_iter(pattern):
+                keys.append(key)
+            if keys:
+                await self.client.delete(*keys)
+                logger.info("Cleared Redis cache keys matching pattern", pattern=pattern, count=len(keys))
+        except Exception as e:
+            logger.error("Redis operation failed: clear_cache_pattern", pattern=pattern, error=str(e))
+
     async def ping(self) -> bool:
         if not self.client:
             return False

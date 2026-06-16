@@ -185,6 +185,13 @@ async def delete_ingested_document(
         await db.delete(doc)
         await db.commit()
         
+        # Invalidate RAG cache since document vectors are removed
+        try:
+            from app.services.redis_cache import redis_service
+            await redis_service.clear_cache_pattern("rag_cache:*")
+        except Exception as cache_err:
+            logger.error("Failed to clear RAG cache on document deletion", error=str(cache_err))
+            
         logger.info("Deleted document and associated Qdrant vectors", document_id=str(document_id), filename=doc.filename)
     except HTTPException:
         raise

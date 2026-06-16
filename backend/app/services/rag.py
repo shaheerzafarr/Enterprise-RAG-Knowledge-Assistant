@@ -137,15 +137,17 @@ class RAGService:
         await db.commit()
 
         # 8. Write response payload to Redis cache (1 hour TTL)
-        try:
-            response_data = {
-                "answer": answer,
-                "sources": sources
-            }
-            await redis_service.set(cache_key, json.dumps(response_data), expire_seconds=3600)
-            logger.info("RAG Response written to Redis cache successfully.", query=query)
-        except Exception as e:
-            logger.error("Failed to write response to Redis cache", error=str(e))
+        # Prevent caching fallback/error answers to minimize cache staleness for unanswered questions
+        if hits and not answer.startswith("I cannot answer"):
+            try:
+                response_data = {
+                    "answer": answer,
+                    "sources": sources
+                }
+                await redis_service.set(cache_key, json.dumps(response_data), expire_seconds=3600)
+                logger.info("RAG Response written to Redis cache successfully.", query=query)
+            except Exception as e:
+                logger.error("Failed to write response to Redis cache", error=str(e))
 
         return {
             "answer": answer,
@@ -302,15 +304,17 @@ class RAGService:
         await db.commit()
 
         # 8. Write response payload to Redis cache (1 hour TTL)
-        try:
-            response_data = {
-                "answer": answer,
-                "sources": sources
-            }
-            await redis_service.set(cache_key, json.dumps(response_data), expire_seconds=3600)
-            logger.info("RAG Streaming Response written to Redis cache successfully.", query=query)
-        except Exception as e:
-            logger.error("Failed to write response to Redis cache", error=str(e))
+        # Prevent caching fallback/error answers to minimize cache staleness for unanswered questions
+        if hits and not answer.startswith("I cannot answer"):
+            try:
+                response_data = {
+                    "answer": answer,
+                    "sources": sources
+                }
+                await redis_service.set(cache_key, json.dumps(response_data), expire_seconds=3600)
+                logger.info("RAG Streaming Response written to Redis cache successfully.", query=query)
+            except Exception as e:
+                logger.error("Failed to write response to Redis cache", error=str(e))
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 

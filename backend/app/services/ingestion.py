@@ -142,6 +142,13 @@ class IngestionService:
             await db.refresh(doc_record)
             logger.info("Document ingestion completed successfully.", filename=filename, doc_id=str(doc_record.id))
 
+            # Invalidate all dynamic RAG query cache entries since the knowledge database has changed
+            try:
+                from app.services.redis_cache import redis_service
+                await redis_service.clear_cache_pattern("rag_cache:*")
+            except Exception as cache_err:
+                logger.error("Failed to clear RAG cache on ingestion", error=str(cache_err))
+
         except Exception as e:
             logger.exception("Document ingestion pipeline failure", filename=filename, error=str(e))
             doc_record.status = "failed"
