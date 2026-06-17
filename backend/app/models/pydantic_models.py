@@ -76,10 +76,12 @@ class RAGQueryResponse(BaseModel):
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=150)
     password: str = Field(..., min_length=6, max_length=100)
+    turnstile_token: str | None = Field(default=None, description="Cloudflare Turnstile token")
 
 class UserLogin(BaseModel):
     username: str
     password: str
+    turnstile_token: str | None = Field(default=None, description="Cloudflare Turnstile token")
 
 class UserResponse(BaseModel):
     id: uuid.UUID

@@ -1,5 +1,9 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, Security
+import urllib.request
+import urllib.parse
+import json
+import asyncio
+from fastapi import APIRouter, Depends, HTTPException, status, Security, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -9,11 +13,72 @@ from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
 from app.models.sqlalchemy_models import User
 from app.models.pydantic_models import UserCreate, UserLogin, UserResponse, TokenResponse
+from app.services.redis_cache import redis_service
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/auth", tags=["User Authentication"])
 
 security = HTTPBearer()
+
+class RateLimiter:
+    def __init__(self, limit: int, window: int):
+        self.limit = limit
+        self.window = window
+
+    async def check(self, request: Request, key_prefix: str) -> None:
+        client_ip = request.client.host if request.client else "unknown"
+        redis_key = f"rate_limit:{key_prefix}:{client_ip}"
+        
+        client = redis_service.client
+        if not client:
+            return
+
+        try:
+            current = await client.get(redis_key)
+            if current and int(current) >= self.limit:
+                ttl = await client.ttl(redis_key)
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Too many attempts. Cloudflare rate limiting active. Please try again in {ttl if ttl > 0 else self.window} seconds."
+                )
+            
+            async with client.pipeline(transaction=True) as pipe:
+                pipe.incr(redis_key)
+                if not current:
+                    pipe.expire(redis_key, self.window)
+                await pipe.execute()
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Rate limiter Redis failure", error=str(e))
+
+def rate_limit(limit: int = 5, window: int = 60, prefix: str = "auth"):
+    async def dependency(request: Request):
+        limiter = RateLimiter(limit, window)
+        await limiter.check(request, prefix)
+    return dependency
+
+def _sync_verify_turnstile(token: str, secret_key: str) -> bool:
+    url = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+    data = urllib.parse.urlencode({
+        "secret": secret_key,
+        "response": token
+    }).encode("utf-8")
+    try:
+        req = urllib.request.Request(url, data=data, method="POST")
+        with urllib.request.urlopen(req, timeout=5) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            return res_data.get("success", False)
+    except Exception as e:
+        logger.error("Turnstile verification API request failure", error=str(e))
+        return False
+
+async def verify_turnstile(token: str | None) -> bool:
+    if not token:
+        return False
+    from app.core.config import settings
+    secret_key = settings.TURNSTILE_SECRET_KEY
+    return await asyncio.to_thread(_sync_verify_turnstile, token, secret_key)
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(security),
@@ -50,11 +115,16 @@ async def get_current_user(
         )
     return user
 
-@router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limit(limit=3, window=60, prefix="signup"))])
 async def signup(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     """
     Register a new user and return a JWT access token.
     """
+    if not await verify_turnstile(payload.turnstile_token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Security validation failed: Please complete the 'I am not a robot' verification."
+        )
     try:
         # Check if username already exists
         query = select(User).where(User.username == payload.username)
@@ -90,11 +160,16 @@ async def signup(payload: UserCreate, db: AsyncSession = Depends(get_db)):
             detail="Internal signup failure"
         )
 
-@router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+@router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK, dependencies=[Depends(rate_limit(limit=5, window=60, prefix="login"))])
 async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     """
     Authenticate a user with credentials and return a JWT access token.
     """
+    if not await verify_turnstile(payload.turnstile_token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Security validation failed: Please complete the 'I am not a robot' verification."
+        )
     try:
         query = select(User).where(User.username == payload.username)
         result = await db.execute(query)

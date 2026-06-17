@@ -71,19 +71,19 @@ async function apiRequest<T>(
 export const apiService = {
   // Authentication
   auth: {
-    signup: async (username: string, password: string): Promise<AuthResponse> => {
+    signup: async (username: string, password: string, turnstileToken?: string): Promise<AuthResponse> => {
       return apiRequest<AuthResponse>('/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, turnstile_token: turnstileToken }),
       });
     },
 
-    login: async (username: string, password: string): Promise<AuthResponse> => {
+    login: async (username: string, password: string, turnstileToken?: string): Promise<AuthResponse> => {
       return apiRequest<AuthResponse>('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, turnstile_token: turnstileToken }),
       });
     },
 

@@ -9,8 +9,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  signup: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, turnstileToken?: string) => Promise<void>;
+  signup: (username: string, password: string, turnstileToken?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -57,10 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadUser();
   }, [pathname, router]);
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string, turnstileToken?: string) => {
     setIsLoading(true);
     try {
-      const data = await apiService.auth.login(username, password);
+      const data = await apiService.auth.login(username, password, turnstileToken);
       localStorage.setItem('auth_token', data.access_token);
       setUser(data.user);
       setIsAuthenticated(true);
@@ -74,10 +74,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (username: string, password: string) => {
+  const signup = async (username: string, password: string, turnstileToken?: string) => {
     setIsLoading(true);
     try {
-      const data = await apiService.auth.signup(username, password);
+      const data = await apiService.auth.signup(username, password, turnstileToken);
       localStorage.setItem('auth_token', data.access_token);
       setUser(data.user);
       setIsAuthenticated(true);

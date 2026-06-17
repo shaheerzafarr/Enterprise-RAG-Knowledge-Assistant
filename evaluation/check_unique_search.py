@@ -2,10 +2,12 @@ import asyncio
 import sys
 import os
 
-sys.path.append(os.path.join(os.getcwd(), "backend"))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.abspath(os.path.join(script_dir, "..", "backend"))
+sys.path.append(backend_dir)
 
-from dotenv import load_dotenv
-load_dotenv(dotenv_path="backend/.env")
+from dotenv import load_dotenv  
+load_dotenv(dotenv_path=os.path.join(backend_dir, ".env"))
 
 from app.services.qdrant import qdrant_service
 from app.services.embedding import embedding_service

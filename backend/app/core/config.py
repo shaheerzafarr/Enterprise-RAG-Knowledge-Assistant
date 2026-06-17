@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = Field(default="super_secret_jwt_key_change_me_in_production")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
+    # Turnstile settings
+    TURNSTILE_SECRET_KEY: str = Field(default="1x00000000000000000000000000000000U")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

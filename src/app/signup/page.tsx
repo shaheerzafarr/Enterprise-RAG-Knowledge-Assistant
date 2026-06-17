@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const { signup, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -20,6 +21,25 @@ export default function SignupPage() {
       router.replace('/chat');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    // Add callback to window for Cloudflare Turnstile
+    (window as any).onTurnstileSuccess = (token: string) => {
+      setTurnstileToken(token);
+    };
+
+    // Dynamically insert the Turnstile script tag
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+      delete (window as any).onTurnstileSuccess;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,10 +67,20 @@ export default function SignupPage() {
       return;
     }
 
+    if (!turnstileToken) {
+      setError("Please complete the 'I am not a robot' security check.");
+      return;
+    }
+
     try {
-      await signup(cleanUsername, password);
+      await signup(cleanUsername, password, turnstileToken);
     } catch (err: any) {
       setError(err?.message || 'Registration failed. Please choose another username.');
+      // Reset Turnstile on error to force re-verification
+      if (typeof window !== 'undefined' && (window as any).turnstile) {
+        (window as any).turnstile.reset();
+        setTurnstileToken(null);
+      }
     }
   };
 
@@ -139,9 +169,19 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {/* Cloudflare Turnstile Verification Widget */}
+          <div className="flex justify-center my-3 bg-slate-950/20 py-2 border border-slate-800/30 rounded-xl">
+            <div
+              className="cf-turnstile"
+              data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || "1x00000000000000000000AA"}
+              data-theme="dark"
+              data-callback="onTurnstileSuccess"
+            ></div>
+          </div>
+
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !turnstileToken}
             className="w-full flex items-center justify-center gap-2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-semibold rounded-xl text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isLoading ? (
