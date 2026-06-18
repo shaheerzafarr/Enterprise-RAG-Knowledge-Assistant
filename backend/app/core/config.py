@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
     # Turnstile settings
-    TURNSTILE_SECRET_KEY: str = Field()
+    TURNSTILE_SECRET_KEY: str = Field(default="")
     BYPASS_TURNSTILE: bool = Field(default=False)
 
     model_config = SettingsConfigDict(
