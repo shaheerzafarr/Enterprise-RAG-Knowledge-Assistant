@@ -7,7 +7,11 @@ import {
   APIErrorResponse 
 } from '../types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+let rawBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+if (!rawBaseUrl.endsWith('/api/v1')) {
+  rawBaseUrl = `${rawBaseUrl.replace(/\/$/, '')}/api/v1`;
+}
+const API_BASE_URL = rawBaseUrl;
 
 /**
  * Custom request wrapper to automatically inject JWT token headers.
