@@ -1,3 +1,13 @@
+---
+title: Toruqx Secure RAG Engine
+emoji: ♉
+colorFrom: indigo
+colorTo: violet
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Toruqx | Production-Grade Secure Enterprise RAG Engine
 
 ```
