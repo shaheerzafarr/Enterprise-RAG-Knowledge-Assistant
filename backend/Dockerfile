@@ -19,7 +19,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 # Copy application source code
 COPY . .
 
-EXPOSE 8000
+EXPOSE 7860
 
 # Run FastAPI application using uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
