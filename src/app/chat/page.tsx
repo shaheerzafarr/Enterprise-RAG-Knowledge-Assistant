@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiService } from '../../services/api';
+import { useSidebar } from '../../components/sidebar-context';
 import { 
   Sparkles, 
   MessageSquarePlus, 
@@ -10,10 +11,12 @@ import {
   Cpu, 
   FileText, 
   ShieldCheck,
-  Loader2
+  Loader2,
+  Menu
 } from 'lucide-react';
 
 export default function ChatDashboardPage() {
+  const { toggleMobileOpen } = useSidebar();
   const [creating, setCreating] = useState(false);
   const router = useRouter();
 
@@ -53,11 +56,32 @@ export default function ChatDashboardPage() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/60 via-slate-950 to-black p-8 overflow-y-auto">
-      {/* Glow overlays */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden relative">
+      {/* Header */}
+      <header className="px-6 py-4 border-b border-slate-900/60 bg-slate-950/80 backdrop-blur-md flex items-center gap-4 shrink-0 z-10">
+        <button
+          onClick={toggleMobileOpen}
+          className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800 rounded-xl transition-all cursor-pointer inline-flex md:hidden"
+          title="Open Navigation"
+        >
+          <Menu className="h-4.5 w-4.5" />
+        </button>
+        <div>
+          <h1 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+            RAG Assistant Workspace
+          </h1>
+          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+            Home Dashboard
+          </span>
+        </div>
+      </header>
 
-      <div className="max-w-2xl text-center relative z-10 space-y-8">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/60 via-slate-950 to-black p-8 overflow-y-auto relative">
+        {/* Glow overlays */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-2xl text-center relative z-10 space-y-8">
         {/* Welcome Header */}
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-xs font-semibold text-slate-300">
@@ -107,6 +131,7 @@ export default function ChatDashboardPage() {
           })}
         </div>
       </div>
+    </div>
     </div>
   );
 }

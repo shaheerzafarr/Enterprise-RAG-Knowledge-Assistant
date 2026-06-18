@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const widgetIdRef = React.useRef<string | null>(null);
   
   const { login, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -23,21 +25,64 @@ export default function LoginPage() {
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    // Add callback to window for Cloudflare Turnstile
-    (window as any).onTurnstileSuccess = (token: string) => {
-      setTurnstileToken(token);
+    let active = true;
+
+    const renderWidget = () => {
+      if (!active || !containerRef.current || widgetIdRef.current) return;
+      if (typeof window !== 'undefined' && (window as any).turnstile) {
+        try {
+          if (containerRef.current) {
+            containerRef.current.innerHTML = '';
+          }
+          const id = (window as any).turnstile.render(containerRef.current, {
+            sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || "1x00000000000000000000AA",
+            theme: 'dark',
+            callback: (token: string) => {
+              if (active) {
+                setTurnstileToken(token);
+              }
+            },
+          });
+          widgetIdRef.current = id;
+        } catch (e) {
+          console.error("Turnstile render error:", e);
+        }
+      }
     };
 
-    // Dynamically insert the Turnstile script tag
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
+    (window as any).onloadTurnstileCallback = () => {
+      renderWidget();
+    };
+
+    // Dynamically insert the Turnstile script tag if not present
+    let script = document.querySelector('script[src*="turnstile/v0/api.js"]') as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit';
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    } else {
+      if ((window as any).turnstile) {
+        renderWidget();
+      } else {
+        const prevCallback = (window as any).onloadTurnstileCallback;
+        (window as any).onloadTurnstileCallback = () => {
+          if (prevCallback) prevCallback();
+          renderWidget();
+        };
+      }
+    }
 
     return () => {
-      document.body.removeChild(script);
-      delete (window as any).onTurnstileSuccess;
+      active = false;
+      if (widgetIdRef.current && (window as any).turnstile) {
+        try {
+          (window as any).turnstile.remove(widgetIdRef.current);
+        } catch (e) {}
+          widgetIdRef.current = null;
+      }
+      delete (window as any).onloadTurnstileCallback;
     };
   }, []);
 
@@ -50,17 +95,20 @@ export default function LoginPage() {
       return;
     }
 
-    if (!turnstileToken) {
+    const bypass = process.env.NEXT_PUBLIC_BYPASS_TURNSTILE === 'true';
+    const token = turnstileToken || (bypass ? 'dev-bypass-token' : null);
+
+    if (!token) {
       setError("Please complete the 'I am not a robot' security check.");
       return;
     }
 
     try {
-      await login(username.trim(), password, turnstileToken);
+      await login(username.trim(), password, token);
     } catch (err: any) {
       setError(err?.message || 'Login failed. Please check your credentials.');
       // Reset Turnstile on error to force re-verification
-      if (typeof window !== 'undefined' && (window as any).turnstile) {
+      if (typeof window !== 'undefined' && (window as any).turnstile && turnstileToken) {
         (window as any).turnstile.reset();
         setTurnstileToken(null);
       }
@@ -136,17 +184,12 @@ export default function LoginPage() {
 
           {/* Cloudflare Turnstile Verification Widget */}
           <div className="flex justify-center my-3 bg-slate-950/20 py-2 border border-slate-800/30 rounded-xl">
-            <div
-              className="cf-turnstile"
-              data-sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITEKEY || "1x00000000000000000000AA"}
-              data-theme="dark"
-              data-callback="onTurnstileSuccess"
-            ></div>
+            <div ref={containerRef}></div>
           </div>
 
           <button
             type="submit"
-            disabled={isLoading || !turnstileToken}
+            disabled={isLoading || (!turnstileToken && process.env.NEXT_PUBLIC_BYPASS_TURNSTILE !== 'true')}
             className="w-full flex items-center justify-center gap-2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-semibold rounded-xl text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isLoading ? (

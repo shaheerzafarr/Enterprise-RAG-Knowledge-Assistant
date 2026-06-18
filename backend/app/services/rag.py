@@ -36,6 +36,27 @@ class RAGService:
         if not session:
             raise ValueError(f"Chat session {session_id} not found.")
 
+        # Auto-rename session if it has the default title
+        if session.title == "New Conversation":
+            try:
+                title_prompt = (
+                    "You are a helpful assistant. Generate a very short, concise topic title (maximum 4-5 words) "
+                    "for a chat session based on this first user query. Do not use quotes, punctuation, or formatting. "
+                    "Output ONLY the title text, nothing else.\n\n"
+                    f"User Query: {query}"
+                )
+                generated_title = await gemini_service.generate_response(title_prompt)
+                generated_title = generated_title.strip().strip('"').strip("'")
+                if generated_title and len(generated_title) > 0:
+                    session.title = generated_title[:100]
+                    logger.info("Auto-renamed chat session", session_id=str(session_id), new_title=session.title)
+            except Exception as title_err:
+                logger.error("Failed to auto-rename session title", error=str(title_err))
+                fallback_title = query.strip()
+                if len(fallback_title) > 40:
+                    fallback_title = fallback_title[:37] + "..."
+                session.title = fallback_title
+
         # 2. Append User query message to Postgres history
         user_msg = ChatMessage(session_id=session_id, role="user", content=query)
         db.add(user_msg)
@@ -193,6 +214,27 @@ class RAGService:
         session = result.scalar_one_or_none()
         if not session:
             raise ValueError(f"Chat session {session_id} not found.")
+
+        # Auto-rename session if it has the default title
+        if session.title == "New Conversation":
+            try:
+                title_prompt = (
+                    "You are a helpful assistant. Generate a very short, concise topic title (maximum 4-5 words) "
+                    "for a chat session based on this first user query. Do not use quotes, punctuation, or formatting. "
+                    "Output ONLY the title text, nothing else.\n\n"
+                    f"User Query: {query}"
+                )
+                generated_title = await gemini_service.generate_response(title_prompt)
+                generated_title = generated_title.strip().strip('"').strip("'")
+                if generated_title and len(generated_title) > 0:
+                    session.title = generated_title[:100]
+                    logger.info("Auto-renamed chat session", session_id=str(session_id), new_title=session.title)
+            except Exception as title_err:
+                logger.error("Failed to auto-rename session title", error=str(title_err))
+                fallback_title = query.strip()
+                if len(fallback_title) > 40:
+                    fallback_title = fallback_title[:37] + "..."
+                session.title = fallback_title
 
         # 2. Append User query message to Postgres history
         user_msg = ChatMessage(session_id=session_id, role="user", content=query)

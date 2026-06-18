@@ -3,7 +3,30 @@
 import React from 'react';
 import Sidebar from '../../components/sidebar';
 import { useAuth } from '../../components/auth-provider';
+import { SidebarProvider, useSidebar } from '../../components/sidebar-context';
 import { Loader2 } from 'lucide-react';
+
+function ChatLayoutContent({ children }: { children: React.ReactNode }) {
+  const { isMobileOpen, setIsMobileOpen } = useSidebar();
+
+  return (
+    <div className="flex-1 flex overflow-hidden h-screen max-h-screen relative">
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {isMobileOpen && (
+        <div 
+          onClick={() => setIsMobileOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300"
+        />
+      )}
+      
+      <Sidebar />
+      
+      <main className="flex-1 flex flex-col h-screen max-h-screen overflow-hidden bg-slate-950">
+        {children}
+      </main>
+    </div>
+  );
+}
 
 export default function ChatLayout({
   children,
@@ -30,11 +53,8 @@ export default function ChatLayout({
   }
 
   return (
-    <div className="flex-1 flex overflow-hidden h-screen max-h-screen">
-      <Sidebar />
-      <main className="flex-1 flex flex-col h-screen max-h-screen overflow-hidden bg-slate-950">
-        {children}
-      </main>
-    </div>
+    <SidebarProvider>
+      <ChatLayoutContent>{children}</ChatLayoutContent>
+    </SidebarProvider>
   );
 }

@@ -1,5 +1,7 @@
 import os
+# pyrefly: ignore [missing-import]
 from pydantic_settings import BaseSettings, SettingsConfigDict
+# pyrefly: ignore [missing-import]
 from pydantic import Field
 
 class Settings(BaseSettings):
@@ -21,7 +23,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
     # Turnstile settings
-    TURNSTILE_SECRET_KEY: str = Field(default="1x00000000000000000000000000000000U")
+    TURNSTILE_SECRET_KEY: str = Field()
 
     model_config = SettingsConfigDict(
         env_file=".env",

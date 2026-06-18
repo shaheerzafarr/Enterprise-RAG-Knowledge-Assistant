@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '../../../services/api';
 import { DocumentUploadStatus } from '../../../types';
+import { useSidebar } from '../../../components/sidebar-context';
 import { 
   UploadCloud, 
   FileText, 
@@ -11,7 +12,8 @@ import {
   Loader2, 
   AlertCircle,
   FileCode,
-  Trash2
+  Trash2,
+  Menu
 } from 'lucide-react';
 
 interface ActivePollingItem {
@@ -20,6 +22,7 @@ interface ActivePollingItem {
 }
 
 export default function DocumentUploadPage() {
+  const { toggleMobileOpen } = useSidebar();
   const [dragActive, setDragActive] = useState(false);
   const [uploads, setUploads] = useState<DocumentUploadStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -191,19 +194,37 @@ export default function DocumentUploadPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-950 p-8 overflow-y-auto">
-      <div className="max-w-3xl mx-auto w-full space-y-8">
-        
-        {/* Page Header */}
+    <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden relative">
+      {/* Header */}
+      <header className="px-6 py-4 border-b border-slate-900/60 bg-slate-950/80 backdrop-blur-md flex items-center gap-4 shrink-0 z-10">
+        <button
+          onClick={toggleMobileOpen}
+          className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800 rounded-xl transition-all cursor-pointer inline-flex md:hidden"
+          title="Open Navigation"
+        >
+          <Menu className="h-4.5 w-4.5" />
+        </button>
         <div>
-          <h1 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-            <UploadCloud className="h-5 w-5 text-blue-400" />
+          <h1 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+            <UploadCloud className="h-4 w-4 text-blue-400" />
             Document Ingestion Zone
           </h1>
-          <p className="text-xs text-slate-500 font-medium leading-relaxed mt-1">
-            Upload text specifications or data documents. Uploaded text is chunked, converted to vector embeddings, and indexed into Qdrant in the background.
-          </p>
+          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+            Index Documents Into Qdrant
+          </span>
         </div>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-8 relative">
+        <div className="max-w-3xl mx-auto w-full space-y-8">
+          
+          {/* Page Info */}
+          <div className="bg-slate-900/30 backdrop-blur-sm border border-slate-900 p-4 rounded-xl">
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Upload text specifications or data documents. Uploaded text is chunked, converted to vector embeddings, and indexed into Qdrant in the background.
+            </p>
+          </div>
 
         {/* Global Error Banner */}
         {error && (
@@ -336,6 +357,7 @@ export default function DocumentUploadPage() {
         </div>
 
       </div>
+    </div>
     </div>
   );
 }

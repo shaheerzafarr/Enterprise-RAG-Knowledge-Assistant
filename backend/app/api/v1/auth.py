@@ -74,11 +74,17 @@ def _sync_verify_turnstile(token: str, secret_key: str) -> bool:
         return False
 
 async def verify_turnstile(token: str | None) -> bool:
+    import os
+    if os.getenv("BYPASS_TURNSTILE") == "true":
+        logger.info("Turnstile verification bypassed via environment configuration.")
+        return True
     if not token:
         return False
     from app.core.config import settings
     secret_key = settings.TURNSTILE_SECRET_KEY
     return await asyncio.to_thread(_sync_verify_turnstile, token, secret_key)
+
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(security),

@@ -5,15 +5,18 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiService } from '../../../services/api';
 import { Message, CitationSource } from '../../../types';
 import ChatMessageBubble from '../../../components/chat-message-bubble';
+import { useSidebar } from '../../../components/sidebar-context';
 import { 
   Send, 
   Loader2, 
   ArrowDown, 
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Menu
 } from 'lucide-react';
 
 export default function ChatSessionPage() {
+  const { toggleMobileOpen } = useSidebar();
   const params = useParams();
   const sessionId = params?.id as string;
   const router = useRouter();
@@ -200,13 +203,34 @@ export default function ChatSessionPage() {
     } finally {
       setStreaming(false);
       setTimeout(scrollToBottomLock, 50);
+      
+      // Check for auto-generated session title updates
+      (async () => {
+        try {
+          const sessions = await apiService.chat.listSessions();
+          const activeSession = sessions.find((s) => s.id === sessionId);
+          if (activeSession && activeSession.title !== sessionTitle) {
+            setSessionTitle(activeSession.title);
+            window.dispatchEvent(new Event('chat-session-updated'));
+          }
+        } catch (e) {
+          console.error('Failed to update session title:', e);
+        }
+      })();
     }
   };
 
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-950 relative">
       {/* Session Header */}
-      <header className="px-6 py-4 border-b border-slate-900/60 bg-slate-950/80 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
+      <header className="px-6 py-4 border-b border-slate-900/60 bg-slate-950/80 backdrop-blur-md flex items-center gap-4 shrink-0 z-10">
+        <button
+          onClick={toggleMobileOpen}
+          className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800 rounded-xl transition-all cursor-pointer inline-flex md:hidden"
+          title="Open Navigation"
+        >
+          <Menu className="h-4.5 w-4.5" />
+        </button>
         <div>
           <h1 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-blue-400" />
