@@ -2,9 +2,14 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
+# Sanitize DATABASE_URL for asyncpg driver compatibility (convert sslmode= to ssl=)
+db_url = settings.DATABASE_URL
+if "sslmode=" in db_url:
+    db_url = db_url.replace("sslmode=", "ssl=")
+
 # Create async database engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    db_url,
     echo=False,  # Set to True for debugging SQL queries
     pool_pre_ping=True,  # Check connection health before using
     pool_size=10,
