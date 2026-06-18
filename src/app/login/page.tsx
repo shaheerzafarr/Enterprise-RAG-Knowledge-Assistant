@@ -126,32 +126,27 @@ export default function LoginPage() {
           <div className="inline-flex p-3 bg-slate-950 border border-slate-800 rounded-2xl mb-4 shadow-xl shadow-indigo-500/5">
             <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
-                d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-                stroke="url(#toruqx-grad-login)"
+                d="M4.5 7.5C6 5 9 3.5 12 3.5s6 1.5 7.5 4"
+                stroke="url(#toruqx-taurus-horns-login)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
               />
               <path
-                d="M7.5 12c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5-2.015 4.5-4.5 4.5-4.5-2.015-4.5-4.5z"
-                stroke="url(#toruqx-grad-alt-login)"
-                strokeWidth="1.5"
-                strokeDasharray="3 3"
+                d="M12 9c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5S15 9 12 9z"
+                stroke="url(#toruqx-taurus-base-login)"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
               />
-              <path
-                d="M12 8v8M10 10l4 4M14 10l-4 4"
-                stroke="#f8fafc"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
+              <circle cx="12" cy="14.5" r="2" fill="#ffffff" />
               <defs>
-                <linearGradient id="toruqx-grad-login" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <linearGradient id="toruqx-taurus-horns-login" x1="4.5" y1="3.5" x2="19.5" y2="7.5" gradientUnits="userSpaceOnUse">
                   <stop stopColor="#3b82f6" />
                   <stop offset="0.5" stopColor="#6366f1" />
-                  <stop offset="1" stopColor="#a855f7" />
+                  <stop offset="1" stopColor="#8b5cf6" />
                 </linearGradient>
-                <linearGradient id="toruqx-grad-alt-login" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#ec4899" />
-                  <stop offset="1" stopColor="#3b82f6" />
+                <linearGradient id="toruqx-taurus-base-login" x1="6.5" y1="9" x2="17.5" y2="20" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#6366f1" />
+                  <stop offset="1" stopColor="#ec4899" />
                 </linearGradient>
               </defs>
             </svg>
