@@ -19,7 +19,10 @@ class QdrantService:
     async def connect(self) -> None:
         if not self.client:
             logger.info("Initializing connection to Qdrant...", url=settings.QDRANT_URL)
-            self.client = AsyncQdrantClient(url=settings.QDRANT_URL)
+            if settings.QDRANT_API_KEY:
+                self.client = AsyncQdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+            else:
+                self.client = AsyncQdrantClient(url=settings.QDRANT_URL)
             # Fetch collections list to verify connectivity
             await self.client.get_collections()
             logger.info("Successfully connected to Qdrant.")

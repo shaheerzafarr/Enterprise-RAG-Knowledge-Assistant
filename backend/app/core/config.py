@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(default="postgresql+asyncpg://postgres:postgres_secure_password@localhost:5432/rag_db")
     REDIS_URL: str = Field(default="redis://localhost:6379/0")
     QDRANT_URL: str = Field(default="http://localhost:6333")
+    QDRANT_API_KEY: str = Field(default="")
 
     # ML & API keys
     GEMINI_API_KEY: str = Field(default="")
