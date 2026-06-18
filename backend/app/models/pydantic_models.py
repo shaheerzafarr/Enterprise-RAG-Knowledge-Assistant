@@ -15,6 +15,7 @@ class IngestedDocumentResponse(BaseModel):
     status: str
     error_message: str | None = None
     created_at: datetime
+    user_id: uuid.UUID | None = None
 
     class Config:
         from_attributes = True

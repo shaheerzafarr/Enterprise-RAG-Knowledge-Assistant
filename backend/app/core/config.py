@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     # Turnstile settings
     TURNSTILE_SECRET_KEY: str = Field()
+    BYPASS_TURNSTILE: bool = Field(default=False)
 
     model_config = SettingsConfigDict(
         env_file=".env",

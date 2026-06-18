@@ -41,6 +41,8 @@ async def lifespan(app: FastAPI):
         
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Add user_id multi-tenancy column to ingested_documents if it doesn't exist yet
+            await conn.execute(text("ALTER TABLE ingested_documents ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE;"))
         logger.info("Successfully connected to PostgreSQL database and initialized tables.")
     except Exception as e:
         logger.critical("Failed to connect to PostgreSQL database or initialize tables during startup", error=str(e))

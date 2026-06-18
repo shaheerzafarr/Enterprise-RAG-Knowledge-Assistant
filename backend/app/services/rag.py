@@ -86,10 +86,12 @@ class RAGService:
         query_vector = await embedding_service.get_embedding(query)
         # Retrieve more points to allow deduplication and maximize recall
         retrieve_limit = max(limit * 5, 30)
-        hits = await qdrant_service.search_similarity(
+        hits = await qdrant_service.search_hybrid(
             collection_name="kb_documents",
             query_vector=query_vector,
-            limit=retrieve_limit
+            query_text=query,
+            limit=retrieve_limit,
+            user_id=session.user_id
         )
 
         # Deduplicate hits by content text to prevent identical chunks from duplicate file uploads crowding out results
@@ -273,10 +275,12 @@ class RAGService:
         query_vector = await embedding_service.get_embedding(query)
         # Retrieve more points to allow deduplication and maximize recall
         retrieve_limit = max(limit * 5, 30)
-        hits = await qdrant_service.search_similarity(
+        hits = await qdrant_service.search_hybrid(
             collection_name="kb_documents",
             query_vector=query_vector,
-            limit=retrieve_limit
+            query_text=query,
+            limit=retrieve_limit,
+            user_id=session.user_id
         )
 
         # Deduplicate hits by content text to prevent identical chunks from duplicate file uploads crowding out results

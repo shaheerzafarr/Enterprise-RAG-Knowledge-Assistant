@@ -1,6 +1,6 @@
 import uuid
 # pyrefly: ignore [missing-import]
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
 # pyrefly: ignore [missing-import]
 from sqlalchemy.ext.asyncio import AsyncSession
 # pyrefly: ignore [missing-import]
@@ -20,44 +20,56 @@ router = APIRouter(prefix="/ingestion", tags=["Document Ingestion"])
 
 @router.post("/text", response_model=IngestedDocumentResponse, status_code=status.HTTP_201_CREATED)
 async def ingest_text(
+    background_tasks: BackgroundTasks,
     payload: TextIngestionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Ingest arbitrary raw text content, split into chunks, generate local embeddings, and save to Qdrant.
+    Ingest arbitrary raw text content, split into chunks, generate local embeddings, and save to Qdrant asynchronously.
     """
     try:
-        content_bytes_len = len(payload.content.encode("utf-8"))
-        doc = await ingestion_service.ingest_document(
-            db=db,
+        content_bytes = payload.content.encode("utf-8")
+        file_size = len(content_bytes)
+        
+        # Create base DB audit log in 'pending' status
+        doc_record = IngestedDocument(
             filename=payload.filename,
-            content=payload.content,
-            file_size=content_bytes_len
+            file_size=file_size,
+            status="pending",
+            chunk_count=0,
+            user_id=current_user.id
         )
-        if doc.status == "failed":
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Document ingestion failed: {doc.error_message}"
-            )
-        return doc
-    except HTTPException:
-        raise
+        db.add(doc_record)
+        await db.commit()
+        await db.refresh(doc_record)
+
+        # Trigger async ingestion in background
+        background_tasks.add_task(
+            ingestion_service.process_file_ingestion_bg,
+            doc_id=doc_record.id,
+            filename=payload.filename,
+            content_bytes=content_bytes,
+            user_id=current_user.id
+        )
+        
+        return doc_record
     except Exception as e:
         logger.error("Ingest text route failure", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal database or vector error: {str(e)}"
+            detail=f"Failed to schedule text ingestion: {str(e)}"
         )
 
 @router.post("/file", response_model=IngestedDocumentResponse, status_code=status.HTTP_201_CREATED)
 async def ingest_file(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Upload a text file (.txt, .md, .json) or a PDF (.pdf) to chunk, embed, and index in Qdrant.
+    Upload a text file (.txt, .md, .json) or a PDF (.pdf) to chunk, embed, and index in Qdrant asynchronously.
     """
     if not file.filename.lower().endswith((".txt", ".md", ".json", ".pdf")):
         raise HTTPException(
@@ -69,45 +81,33 @@ async def ingest_file(
         content_bytes = await file.read()
         file_size = len(content_bytes)
         
-        if file.filename.lower().endswith(".pdf"):
-            import io
-            from pypdf import PdfReader
-            
-            try:
-                pdf_file = io.BytesIO(content_bytes)
-                reader = PdfReader(pdf_file)
-                text_parts = []
-                for page in reader.pages:
-                    text_parts.append(page.extract_text() or "")
-                content = "\n".join(text_parts)
-            except Exception as pdf_err:
-                logger.error("Failed to parse PDF file content", filename=file.filename, error=str(pdf_err))
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Failed to parse PDF document content: {str(pdf_err)}"
-                )
-        else:
-            content = content_bytes.decode("utf-8")
-        
-        doc = await ingestion_service.ingest_document(
-            db=db,
+        # Create base DB audit log in 'pending' status
+        doc_record = IngestedDocument(
             filename=file.filename,
-            content=content,
-            file_size=file_size
+            file_size=file_size,
+            status="pending",
+            chunk_count=0,
+            user_id=current_user.id
         )
-        if doc.status == "failed":
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"File ingestion failed: {doc.error_message}"
-            )
-        return doc
-    except HTTPException:
-        raise
+        db.add(doc_record)
+        await db.commit()
+        await db.refresh(doc_record)
+
+        # Trigger async ingestion in background
+        background_tasks.add_task(
+            ingestion_service.process_file_ingestion_bg,
+            doc_id=doc_record.id,
+            filename=file.filename,
+            content_bytes=content_bytes,
+            user_id=current_user.id
+        )
+        
+        return doc_record
     except Exception as e:
         logger.error("Ingest file route failure", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal database or parsing error: {str(e)}"
+            detail=f"Failed to schedule file ingestion: {str(e)}"
         )
 
 @router.get("/status/{document_id}", response_model=IngestedDocumentResponse)
@@ -120,13 +120,13 @@ async def get_ingestion_status(
     Retrieve database synchronization status of a specific document ingestion process.
     """
     try:
-        query = select(IngestedDocument).where(IngestedDocument.id == document_id)
+        query = select(IngestedDocument).where(IngestedDocument.id == document_id, IngestedDocument.user_id == current_user.id)
         result = await db.execute(query)
         doc = result.scalar_one_or_none()
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Document record not found."
+                detail="Document record not found or access denied."
             )
         return doc
     except HTTPException:
@@ -144,10 +144,10 @@ async def list_ingested_documents(
     current_user: User = Depends(get_current_user)
 ):
     """
-    List all ingested documents in the database, ordered by creation date descending.
+    List all ingested documents in the database for the current user, ordered by creation date descending.
     """
     try:
-        query = select(IngestedDocument).order_by(IngestedDocument.created_at.desc())
+        query = select(IngestedDocument).where(IngestedDocument.user_id == current_user.id).order_by(IngestedDocument.created_at.desc())
         result = await db.execute(query)
         docs = result.scalars().all()
         return docs
@@ -169,13 +169,13 @@ async def delete_ingested_document(
     """
     try:
         # Fetch document record
-        query = select(IngestedDocument).where(IngestedDocument.id == document_id)
+        query = select(IngestedDocument).where(IngestedDocument.id == document_id, IngestedDocument.user_id == current_user.id)
         result = await db.execute(query)
         doc = result.scalar_one_or_none()
         if not doc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Document record not found."
+                detail="Document record not found or access denied."
             )
             
         # Delete from Qdrant first
