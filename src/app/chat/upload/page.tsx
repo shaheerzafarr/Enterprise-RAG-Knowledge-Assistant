@@ -77,7 +77,8 @@ export default function DocumentUploadPage() {
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      await processUpload(files[0]);
+      const uploadPromises = Array.from(files).map(file => processUpload(file));
+      await Promise.all(uploadPromises);
     }
   };
 
@@ -85,9 +86,11 @@ export default function DocumentUploadPage() {
     setError(null);
     const files = e.target.files;
     if (files && files.length > 0) {
-      await processUpload(files[0]);
+      const uploadPromises = Array.from(files).map(file => processUpload(file));
+      await Promise.all(uploadPromises);
     }
   };
+
 
   // 1. Submit file to FastAPI backend
   const processUpload = async (file: File) => {
@@ -249,7 +252,7 @@ export default function DocumentUploadPage() {
           <input
             type="file"
             id="file-upload"
-            multiple={false}
+            multiple={true}
             accept=".txt,.md,.json,.pdf"
             onChange={handleFileChange}
             className="hidden"
@@ -261,13 +264,13 @@ export default function DocumentUploadPage() {
 
           <label htmlFor="file-upload" className="cursor-pointer">
             <span className="text-sm font-bold text-slate-200 hover:text-slate-100 underline decoration-slate-400">
-              Click to upload
+              Click to upload files
             </span>
-            <span className="text-sm text-slate-400"> or drag and drop</span>
+            <span className="text-sm text-slate-400"> or drag and drop multiple files</span>
           </label>
           
           <p className="text-[10px] text-slate-600 font-bold uppercase mt-2 tracking-wider">
-            TXT, MD, JSON, or PDF files only (Max 10MB)
+            TXT, MD, JSON, or PDF files only (Max 10MB per file)
           </p>
         </div>
 
